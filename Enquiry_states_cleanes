@@ -1,0 +1,90 @@
+-- Query to convert state abbreviations to full state names
+SELECT 
+    state AS original_state,
+    CASE 
+        -- States
+        WHEN UPPER(TRIM(state)) = 'AP' THEN 'Andhra Pradesh'
+        WHEN UPPER(TRIM(state)) = 'TAMIL NADU' OR UPPER(TRIM(state)) = 'TN' THEN 'Tamil Nadu'
+        WHEN UPPER(TRIM(state)) = 'RAJASTHAN' OR UPPER(TRIM(state)) = 'RJ' THEN 'Rajasthan'
+        WHEN UPPER(TRIM(state)) = 'JK' OR UPPER(TRIM(state)) = 'J AND K' THEN 'Jammu and Kashmir'
+        WHEN UPPER(TRIM(state)) = 'ASSAM' OR UPPER(TRIM(state)) = 'AS' THEN 'Assam'
+        WHEN UPPER(TRIM(state)) = 'LADAKH' THEN 'Ladakh'
+        WHEN UPPER(TRIM(state)) = 'AN' THEN 'Andaman and Nicobar Islands'
+        WHEN UPPER(TRIM(state)) = 'MZ' THEN 'Mizoram'
+        WHEN UPPER(TRIM(state)) = 'MGH' THEN 'Meghalaya'
+        WHEN UPPER(TRIM(state)) = 'RT' THEN 'Rajasthan'
+        WHEN UPPER(TRIM(state)) = 'PUNJAB' OR UPPER(TRIM(state)) = 'PB' THEN 'Punjab'
+        WHEN UPPER(TRIM(state)) = 'D AND NH' OR UPPER(TRIM(state)) = 'DNH' THEN 'Dadra and Nagar Haveli and Daman and Diu'
+        WHEN UPPER(TRIM(state)) = 'MIZORAM' THEN 'Mizoram'
+        WHEN UPPER(TRIM(state)) = 'TRIPURA' OR UPPER(TRIM(state)) = 'TRI' THEN 'Tripura'
+        WHEN UPPER(TRIM(state)) = 'HR' THEN 'Haryana'
+        WHEN UPPER(TRIM(state)) = 'BH' THEN 'Bihar'
+        WHEN UPPER(TRIM(state)) = 'KAR' THEN 'Karnataka'
+        WHEN UPPER(TRIM(state)) = 'WB' OR UPPER(TRIM(state)) = 'W.BENGAL' THEN 'West Bengal'
+        WHEN UPPER(TRIM(state)) = 'KER' THEN 'Kerala'
+        WHEN UPPER(TRIM(state)) = 'MEGHALAYA' THEN 'Meghalaya'
+        WHEN UPPER(TRIM(state)) = 'GUJARAT' OR UPPER(TRIM(state)) = 'GJ' THEN 'Gujarat'
+        WHEN UPPER(TRIM(state)) = 'OR' THEN 'Odisha'
+        WHEN UPPER(TRIM(state)) = 'JHARKHAND' OR UPPER(TRIM(state)) = 'JH' THEN 'Jharkhand'
+        WHEN UPPER(TRIM(state)) = 'NAGALAND' OR UPPER(TRIM(state)) = 'NL' THEN 'Nagaland'
+        WHEN UPPER(TRIM(state)) = 'ODISHA' THEN 'Odisha'
+        WHEN UPPER(TRIM(state)) = 'TELANGANA' OR UPPER(TRIM(state)) = 'TG' THEN 'Telangana'
+        WHEN UPPER(TRIM(state)) = 'GOA' THEN 'Goa'
+        WHEN UPPER(TRIM(state)) = 'MAH' THEN 'Maharashtra'
+        WHEN UPPER(TRIM(state)) = 'HP' THEN 'Himachal Pradesh'
+        WHEN UPPER(TRIM(state)) = 'UR' THEN 'Uttarakhand'
+        WHEN UPPER(TRIM(state)) = 'MP' THEN 'Madhya Pradesh'
+        WHEN UPPER(TRIM(state)) = 'CG' THEN 'Chhattisgarh'
+        WHEN UPPER(TRIM(state)) = 'HARYANA' THEN 'Haryana'
+        WHEN UPPER(TRIM(state)) = 'KARNATAKA' THEN 'Karnataka'
+        WHEN UPPER(TRIM(state)) = 'KERALA' THEN 'Kerala'
+        WHEN UPPER(TRIM(state)) = 'BIHAR' THEN 'Bihar'
+        WHEN UPPER(TRIM(state)) = 'GDD' THEN 'Goa, Daman and Diu'
+        
+        -- Union Territories
+        WHEN UPPER(TRIM(state)) = 'NG' THEN 'Nagaland'
+        WHEN UPPER(TRIM(state)) = 'TLG' THEN 'Telangana'
+        WHEN UPPER(TRIM(state)) = 'MPR' THEN 'Madhya Pradesh'
+        WHEN UPPER(TRIM(state)) = 'PY' THEN 'Puducherry'
+        WHEN UPPER(TRIM(state)) = 'UP' THEN 'Uttar Pradesh'
+        WHEN UPPER(TRIM(state)) = 'UK' THEN 'Uttarakhand'
+        WHEN UPPER(TRIM(state)) = 'MANIPUR' THEN 'Manipur'
+        WHEN UPPER(TRIM(state)) = 'CD' THEN 'Chandigarh'
+        WHEN UPPER(TRIM(state)) = 'DELHI' OR UPPER(TRIM(state)) = 'DEL' OR UPPER(TRIM(state)) = 'DL' THEN 'Delhi'
+        WHEN UPPER(TRIM(state)) = 'ARP' THEN 'Arunachal Pradesh'
+        WHEN UPPER(TRIM(state)) = 'CHANDIGARH' THEN 'Chandigarh'
+        WHEN UPPER(TRIM(state)) = 'LDK' THEN 'Lakshadweep'
+        
+        -- Handle any unmapped values
+        ELSE CASE 
+            WHEN state = '<Source Code Not Supplied>' THEN 'Unknown'
+            ELSE INITCAP(TRIM(state))
+        END
+    END AS cleaned_state_name,
+    
+    -- Add a flag to identify if it's a state or union territory
+    CASE 
+        WHEN UPPER(TRIM(state)) IN ('PY', 'CD', 'CHANDIGARH', 'DELHI', 'DEL', 'DL', 'LDK', 'AN', 'D AND NH', 'DNH') 
+        THEN 'Union Territory'
+        WHEN state = '<Source Code Not Supplied>' THEN 'Unknown'
+        ELSE 'State'
+    END AS location_type
+
+FROM your_table_name
+WHERE state IS NOT NULL;
+
+-- If you want to update the original table:
+/*
+UPDATE your_table_name 
+SET state = CASE 
+    WHEN UPPER(TRIM(state)) = 'AP' THEN 'Andhra Pradesh'
+    WHEN UPPER(TRIM(state)) = 'TAMIL NADU' OR UPPER(TRIM(state)) = 'TN' THEN 'Tamil Nadu'
+    WHEN UPPER(TRIM(state)) = 'RAJASTHAN' OR UPPER(TRIM(state)) = 'RJ' THEN 'Rajasthan'
+    -- ... (include all the CASE conditions from above)
+    ELSE CASE 
+        WHEN state = '<Source Code Not Supplied>' THEN 'Unknown'
+        ELSE INITCAP(TRIM(state))
+    END
+END
+WHERE state IS NOT NULL;
+*/
