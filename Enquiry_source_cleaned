@@ -1,98 +1,143 @@
--- Balanced Granular Lead Source Analysis Query for Snowflake
--- Groups all sources by platform/channel without going too deep into sub-categories
+-- Snowflake Compatible Lead Source Categorization Query
+-- Groups all sources by platform/channel for balanced granular analysis
 
 SELECT 
     enquiry_source,
     CASE 
         -- All Facebook Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*facebook.*') THEN 'Facebook'
+        WHEN UPPER(enquiry_source) LIKE '%FACEBOOK%' THEN 'Facebook'
         
-        -- All Google Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*google.*') THEN 'Google'
+        -- All Google Sources  
+        WHEN UPPER(enquiry_source) LIKE '%GOOGLE%' THEN 'Google'
         
         -- All Instagram Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*instagram.*') THEN 'Instagram'
+        WHEN UPPER(enquiry_source) LIKE '%INSTAGRAM%' THEN 'Instagram'
         
         -- All WhatsApp Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*whatsapp.*') THEN 'WhatsApp'
+        WHEN UPPER(enquiry_source) LIKE '%WHATSAPP%' THEN 'WhatsApp'
         
         -- All CWS Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*cws.*') THEN 'CWS'
+        WHEN UPPER(enquiry_source) LIKE '%CWS%' THEN 'CWS'
         
         -- All Telephony Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(cloud.*telephony|dse.*cloud|telephonic).*') THEN 'Telephony'
+        WHEN UPPER(enquiry_source) LIKE '%CLOUD%TELEPHONY%' 
+             OR UPPER(enquiry_source) LIKE '%DSE%CLOUD%' 
+             OR UPPER(enquiry_source) LIKE '%TELEPHONIC%' THEN 'Telephony'
         
         -- All Digital Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(digital|web.*site|portals|email).*') THEN 'Digital'
+        WHEN UPPER(enquiry_source) LIKE '%DIGITAL%' 
+             OR UPPER(enquiry_source) LIKE '%WEB%SITE%' 
+             OR UPPER(enquiry_source) LIKE '%PORTALS%' 
+             OR UPPER(enquiry_source) LIKE '%EMAIL%' THEN 'Digital'
         
         -- All Walk-In Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*walk.*in.*') THEN 'Walk-In'
+        WHEN UPPER(enquiry_source) LIKE '%WALK%IN%' 
+             OR UPPER(enquiry_source) LIKE '%WALKIN%' THEN 'Walk-In'
         
         -- All Finance Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(financ|loan.*exchange|diy.*finance).*') THEN 'Finance'
+        WHEN UPPER(enquiry_source) LIKE '%FINANC%' 
+             OR UPPER(enquiry_source) LIKE '%LOAN%EXCHANGE%' 
+             OR UPPER(enquiry_source) LIKE '%DIY%FINANCE%' THEN 'Finance'
         
         -- All BikeWale Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*bikewale.*') THEN 'BikeWale'
+        WHEN UPPER(enquiry_source) LIKE '%BIKEWALE%' THEN 'BikeWale'
         
         -- All BikeDekho Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*bikedekho.*') THEN 'BikeDekho'
+        WHEN UPPER(enquiry_source) LIKE '%BIKEDEKHO%' THEN 'BikeDekho'
         
         -- All 91Wheels Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*91wheels.*') THEN '91Wheels'
+        WHEN UPPER(enquiry_source) LIKE '%91WHEELS%' THEN '91Wheels'
         
         -- All Hero App Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(heroapp|festiveheroapp|hero.*sure.*leads).*') THEN 'Hero Apps'
+        WHEN UPPER(enquiry_source) LIKE '%HEROAPP%' 
+             OR UPPER(enquiry_source) LIKE '%FESTIVEHEROAPP%' 
+             OR UPPER(enquiry_source) LIKE '%HERO%SURE%LEADS%' THEN 'Hero Apps'
         
         -- All HOT Leads
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*hot.*leads.*') THEN 'HOT Leads'
+        WHEN UPPER(enquiry_source) LIKE '%HOT%LEADS%' THEN 'HOT Leads'
         
         -- All Local Marketing
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(local|hyperlocal|small.*mela|mall.*activation).*') THEN 'Local Marketing'
+        WHEN UPPER(enquiry_source) LIKE '%LOCAL%' 
+             OR UPPER(enquiry_source) LIKE '%HYPERLOCAL%' 
+             OR UPPER(enquiry_source) LIKE '%SMALL%MELA%' 
+             OR UPPER(enquiry_source) LIKE '%MALL%ACTIVATION%' THEN 'Local Marketing'
         
         -- All CSC Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*csc.*') THEN 'CSC'
+        WHEN UPPER(enquiry_source) LIKE '%CSC%' THEN 'CSC'
         
         -- All YouTube Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*youtube.*') THEN 'YouTube'
+        WHEN UPPER(enquiry_source) LIKE '%YOUTUBE%' THEN 'YouTube'
         
         -- All Food Delivery
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(zomato|swiggy).*') THEN 'Food Delivery'
+        WHEN UPPER(enquiry_source) LIKE '%ZOMATO%' 
+             OR UPPER(enquiry_source) LIKE '%SWIGGY%' THEN 'Food Delivery'
         
         -- All Showroom Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(showroom|popup.*store).*') THEN 'Showroom'
+        WHEN UPPER(enquiry_source) LIKE '%SHOWROOM%' 
+             OR UPPER(enquiry_source) LIKE '%POPUP%STORE%' THEN 'Showroom'
         
         -- All Referral Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(referral|wot|w/s.*referral).*') THEN 'Referrals'
+        WHEN UPPER(enquiry_source) LIKE '%REFERRAL%' 
+             OR UPPER(enquiry_source) LIKE '%WOT%' 
+             OR UPPER(enquiry_source) LIKE '%W/S%REFERRAL%' THEN 'Referrals'
         
         -- All Field Activities
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(field.*activity|activity.*wot|experiential.*ride|workshop.*test).*') THEN 'Field Activities'
+        WHEN UPPER(enquiry_source) LIKE '%FIELD%ACTIVITY%' 
+             OR UPPER(enquiry_source) LIKE '%ACTIVITY%WOT%' 
+             OR UPPER(enquiry_source) LIKE '%EXPERIENTIAL%RIDE%' 
+             OR UPPER(enquiry_source) LIKE '%WORKSHOP%TEST%' THEN 'Field Activities'
         
         -- All Corporate Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(corporate|corp.*institution|btl).*') THEN 'Corporate'
+        WHEN UPPER(enquiry_source) LIKE '%CORPORATE%' 
+             OR UPPER(enquiry_source) LIKE '%CORP%INSTITUTION%' 
+             OR UPPER(enquiry_source) LIKE '%BTL%' THEN 'Corporate'
         
         -- All Auto Platforms
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(carnbike|carbike360|freedo|droom|ht.*auto).*') THEN 'Auto Platforms'
+        WHEN UPPER(enquiry_source) LIKE '%CARNBIKE%' 
+             OR UPPER(enquiry_source) LIKE '%CARBIKE360%' 
+             OR UPPER(enquiry_source) LIKE '%FREEDO%' 
+             OR UPPER(enquiry_source) LIKE '%DROOM%' 
+             OR UPPER(enquiry_source) LIKE '%HT%AUTO%' THEN 'Auto Platforms'
         
         -- All Partner Platforms
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(rse|impact|goodlife|hfcl|hmcgl|rwa|mbo).*') THEN 'Partner Platforms'
+        WHEN UPPER(enquiry_source) LIKE '%RSE%' 
+             OR UPPER(enquiry_source) LIKE '%IMPACT%' 
+             OR UPPER(enquiry_source) LIKE '%GOODLIFE%' 
+             OR UPPER(enquiry_source) LIKE '%HFCL%' 
+             OR UPPER(enquiry_source) LIKE '%HMCGL%' 
+             OR UPPER(enquiry_source) LIKE '%RWA%' 
+             OR UPPER(enquiry_source) LIKE '%MBO%' THEN 'Partner Platforms'
         
         -- All Business Apps
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(gmb|paytm|esnop).*') THEN 'Business Apps'
+        WHEN UPPER(enquiry_source) LIKE '%GMB%' 
+             OR UPPER(enquiry_source) LIKE '%PAYTM%' 
+             OR UPPER(enquiry_source) LIKE '%ESNOP%' THEN 'Business Apps'
         
         -- All Specialized Platforms
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(zepto|sbiyono|vle|ctwa).*') THEN 'Specialized Platforms'
+        WHEN UPPER(enquiry_source) LIKE '%ZEPTO%' 
+             OR UPPER(enquiry_source) LIKE '%SBIYONO%' 
+             OR UPPER(enquiry_source) LIKE '%VLE%' 
+             OR UPPER(enquiry_source) LIKE '%CTWA%' THEN 'Specialized Platforms'
         
         -- All Campaign Sources
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(campaign|inbound|cross.*selling).*') THEN 'Campaigns'
+        WHEN UPPER(enquiry_source) LIKE '%CAMPAIGN%' 
+             OR UPPER(enquiry_source) LIKE '%INBOUND%' 
+             OR UPPER(enquiry_source) LIKE '%CROSS%SELLING%' THEN 'Campaigns'
         
         -- All Call Center
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*call.*center.*') THEN 'Call Center'
+        WHEN UPPER(enquiry_source) LIKE '%CALL%CENTER%' THEN 'Call Center'
         
         -- All Technology
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(tablet|d2d.*transfer|scrap.*leads).*') THEN 'Technology'
+        WHEN UPPER(enquiry_source) LIKE '%TABLET%' 
+             OR UPPER(enquiry_source) LIKE '%D2D%TRANSFER%' 
+             OR UPPER(enquiry_source) LIKE '%SCRAP%LEADS%' THEN 'Technology'
         
         -- All Others
-        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(others|unspecified|polyvalent|sustenance|float.*canter).*') THEN 'Others'
+        WHEN UPPER(enquiry_source) LIKE '%OTHERS%' 
+             OR UPPER(enquiry_source) LIKE '%UNSPECIFIED%' 
+             OR UPPER(enquiry_source) LIKE '%POLYVALENT%' 
+             OR UPPER(enquiry_source) LIKE '%SUSTENANCE%' 
+             OR UPPER(enquiry_source) LIKE '%FLOAT%CANTER%' THEN 'Others'
         
         -- Default
         ELSE 'Uncategorized'
