@@ -1,0 +1,152 @@
+-- Balanced Granular Lead Source Analysis Query for Snowflake
+-- Groups all sources by platform/channel without going too deep into sub-categories
+
+SELECT 
+    enquiry_source,
+    CASE 
+        -- All Facebook Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*facebook.*') THEN 'Facebook'
+        
+        -- All Google Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*google.*') THEN 'Google'
+        
+        -- All Instagram Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*instagram.*') THEN 'Instagram'
+        
+        -- All WhatsApp Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*whatsapp.*') THEN 'WhatsApp'
+        
+        -- All CWS Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*cws.*') THEN 'CWS'
+        
+        -- All Telephony Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(cloud.*telephony|dse.*cloud|telephonic).*') THEN 'Telephony'
+        
+        -- All Digital Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(digital|web.*site|portals|email).*') THEN 'Digital'
+        
+        -- All Walk-In Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*walk.*in.*') THEN 'Walk-In'
+        
+        -- All Finance Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(financ|loan.*exchange|diy.*finance).*') THEN 'Finance'
+        
+        -- All BikeWale Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*bikewale.*') THEN 'BikeWale'
+        
+        -- All BikeDekho Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*bikedekho.*') THEN 'BikeDekho'
+        
+        -- All 91Wheels Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*91wheels.*') THEN '91Wheels'
+        
+        -- All Hero App Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(heroapp|festiveheroapp|hero.*sure.*leads).*') THEN 'Hero Apps'
+        
+        -- All HOT Leads
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*hot.*leads.*') THEN 'HOT Leads'
+        
+        -- All Local Marketing
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(local|hyperlocal|small.*mela|mall.*activation).*') THEN 'Local Marketing'
+        
+        -- All CSC Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*csc.*') THEN 'CSC'
+        
+        -- All YouTube Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*youtube.*') THEN 'YouTube'
+        
+        -- All Food Delivery
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(zomato|swiggy).*') THEN 'Food Delivery'
+        
+        -- All Showroom Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(showroom|popup.*store).*') THEN 'Showroom'
+        
+        -- All Referral Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(referral|wot|w/s.*referral).*') THEN 'Referrals'
+        
+        -- All Field Activities
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(field.*activity|activity.*wot|experiential.*ride|workshop.*test).*') THEN 'Field Activities'
+        
+        -- All Corporate Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(corporate|corp.*institution|btl).*') THEN 'Corporate'
+        
+        -- All Auto Platforms
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(carnbike|carbike360|freedo|droom|ht.*auto).*') THEN 'Auto Platforms'
+        
+        -- All Partner Platforms
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(rse|impact|goodlife|hfcl|hmcgl|rwa|mbo).*') THEN 'Partner Platforms'
+        
+        -- All Business Apps
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(gmb|paytm|esnop).*') THEN 'Business Apps'
+        
+        -- All Specialized Platforms
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(zepto|sbiyono|vle|ctwa).*') THEN 'Specialized Platforms'
+        
+        -- All Campaign Sources
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(campaign|inbound|cross.*selling).*') THEN 'Campaigns'
+        
+        -- All Call Center
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*call.*center.*') THEN 'Call Center'
+        
+        -- All Technology
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(tablet|d2d.*transfer|scrap.*leads).*') THEN 'Technology'
+        
+        -- All Others
+        WHEN REGEXP_LIKE(enquiry_source, '(?i).*(others|unspecified|polyvalent|sustenance|float.*canter).*') THEN 'Others'
+        
+        -- Default
+        ELSE 'Uncategorized'
+    END AS source_category
+
+FROM your_table_name
+ORDER BY source_category, enquiry_source;
+
+-- Summary query to see distribution across all source categories
+-- Uncomment below to get category-wise counts and percentages
+
+/*
+SELECT 
+    source_category,
+    COUNT(*) as lead_count,
+    ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) as percentage
+FROM (
+    SELECT 
+        enquiry_source,
+        CASE 
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*facebook.*') THEN 'Facebook'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*google.*') THEN 'Google'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*instagram.*') THEN 'Instagram'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*whatsapp.*') THEN 'WhatsApp'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*cws.*') THEN 'CWS'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(cloud.*telephony|dse.*cloud|telephonic).*') THEN 'Telephony'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(digital|web.*site|portals|email).*') THEN 'Digital'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*walk.*in.*') THEN 'Walk-In'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(financ|loan.*exchange|diy.*finance).*') THEN 'Finance'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*bikewale.*') THEN 'BikeWale'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*bikedekho.*') THEN 'BikeDekho'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*91wheels.*') THEN '91Wheels'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(heroapp|festiveheroapp|hero.*sure.*leads).*') THEN 'Hero Apps'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*hot.*leads.*') THEN 'HOT Leads'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(local|hyperlocal|small.*mela|mall.*activation).*') THEN 'Local Marketing'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*csc.*') THEN 'CSC'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*youtube.*') THEN 'YouTube'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(zomato|swiggy).*') THEN 'Food Delivery'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(showroom|popup.*store).*') THEN 'Showroom'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(referral|wot|w/s.*referral).*') THEN 'Referrals'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(field.*activity|activity.*wot|experiential.*ride|workshop.*test).*') THEN 'Field Activities'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(corporate|corp.*institution|btl).*') THEN 'Corporate'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(carnbike|carbike360|freedo|droom|ht.*auto).*') THEN 'Auto Platforms'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(rse|impact|goodlife|hfcl|hmcgl|rwa|mbo).*') THEN 'Partner Platforms'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(gmb|paytm|esnop).*') THEN 'Business Apps'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(zepto|sbiyono|vle|ctwa).*') THEN 'Specialized Platforms'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(campaign|inbound|cross.*selling).*') THEN 'Campaigns'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*call.*center.*') THEN 'Call Center'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(tablet|d2d.*transfer|scrap.*leads).*') THEN 'Technology'
+            WHEN REGEXP_LIKE(enquiry_source, '(?i).*(others|unspecified|polyvalent|sustenance|float.*canter).*') THEN 'Others'
+            ELSE 'Uncategorized'
+        END AS source_category
+    FROM your_table_name
+) categorized_data
+GROUP BY source_category
+ORDER BY lead_count DESC;
+*/
