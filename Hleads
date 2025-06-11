@@ -1,0 +1,55 @@
+WITH leads_with_month AS (
+    SELECT 
+        mobile,
+        lead_date,
+        TO_CHAR(lead_date, 'YYYY-MM') AS lead_month,
+        ROW_NUMBER() OVER (PARTITION BY mobile, TO_CHAR(lead_date, 'YYYY-MM') ORDER BY lead_date DESC) AS rn
+    FROM leads
+),
+
+latest_leads AS (
+    SELECT * 
+    FROM leads_with_month
+    WHERE rn = 1  -- latest lead per mobile per month
+),
+
+matched_enquiries AS (
+    SELECT 
+        l.mobile,
+        l.lead_date,
+        e.enquiry_date,
+        DATEDIFF(DAY, l.lead_date, e.enquiry_date) AS enquiry_diff
+    FROM latest_leads l
+    JOIN enquiries e ON l.mobile = e.mobile
+    WHERE e.enquiry_date > l.lead_date
+      AND DATEDIFF(DAY, l.lead_date, e.enquiry_date) <= 90
+),
+
+matched_sales AS (
+    SELECT 
+        l.mobile,
+        l.lead_date,
+        s.purchase_date,
+        DATEDIFF(DAY, l.lead_date, s.purchase_date) AS purchase_diff
+    FROM latest_leads l
+    JOIN sales s ON l.mobile = s.mobile
+    WHERE s.purchase_date > l.lead_date
+      AND DATEDIFF(DAY, l.lead_date, s.purchase_date) <= 90
+),
+
+-- Combine leads with matched enquiry and sales
+final_output AS (
+    SELECT 
+        l.mobile,
+        l.lead_date,
+        MAX(e.enquiry_date) AS enquiry_date,
+        MAX(s.purchase_date) AS purchase_date,
+        CASE WHEN MAX(e.enquiry_date) IS NOT NULL THEN 'Yes' ELSE 'No' END AS enquiry_valid,
+        CASE WHEN MAX(s.purchase_date) IS NOT NULL THEN 'Yes' ELSE 'No' END AS purchase_valid
+    FROM latest_leads l
+    LEFT JOIN matched_enquiries e ON l.mobile = e.mobile AND l.lead_date = e.lead_date
+    LEFT JOIN matched_sales s ON l.mobile = s.mobile AND l.lead_date = s.lead_date
+    GROUP BY l.mobile, l.lead_date
+)
+
+SELECT * FROM final_output;
