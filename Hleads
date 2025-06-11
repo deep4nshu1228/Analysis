@@ -53,3 +53,80 @@ final_output AS (
 )
 
 SELECT * FROM final_output;
+
+
+
+
+
+---v2 
+
+
+-- 1. Get latest lead per mobile per month
+WITH leads_with_month AS (
+    SELECT 
+        *,
+        TO_CHAR(lead_date, 'YYYY-MM') AS lead_month,
+        ROW_NUMBER() OVER (PARTITION BY mobile, TO_CHAR(lead_date, 'YYYY-MM') ORDER BY lead_date DESC) AS rn
+    FROM leads
+),
+
+latest_leads AS (
+    SELECT *
+    FROM leads_with_month
+    WHERE rn = 1
+),
+
+-- 2. Find best enquiry match (after lead and within 90 days, earliest match)
+enquiry_match AS (
+    SELECT 
+        l.mobile,
+        l.lead_date,
+        e.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY l.mobile, l.lead_date 
+            ORDER BY e.enquiry_date ASC
+        ) AS rn
+    FROM latest_leads l
+    JOIN enquiries e 
+      ON l.mobile = e.mobile 
+     AND e.enquiry_date > l.lead_date
+     AND DATEDIFF(DAY, l.lead_date, e.enquiry_date) <= 90
+),
+
+best_enquiry AS (
+    SELECT * FROM enquiry_match WHERE rn = 1
+),
+
+-- 3. Find best sales match (after lead and within 90 days)
+sales_match AS (
+    SELECT 
+        l.mobile,
+        l.lead_date,
+        s.*,
+        ROW_NUMBER() OVER (
+            PARTITION BY l.mobile, l.lead_date 
+            ORDER BY s.purchase_date ASC
+        ) AS rn
+    FROM latest_leads l
+    JOIN sales s 
+      ON l.mobile = s.mobile 
+     AND s.purchase_date > l.lead_date
+     AND DATEDIFF(DAY, l.lead_date, s.purchase_date) <= 90
+),
+
+best_sale AS (
+    SELECT * FROM sales_match WHERE rn = 1
+)
+
+-- 4. Final output with all columns
+SELECT 
+    l.*,                        -- all lead columns
+    e.*,                        -- all enquiry columns
+    s.*,                        -- all sale columns
+    CASE WHEN e.enquiry_date IS NOT NULL THEN 'Yes' ELSE 'No' END AS enquiry_valid,
+    CASE WHEN s.purchase_date IS NOT NULL THEN 'Yes' ELSE 'No' END AS purchase_valid
+FROM latest_leads l
+LEFT JOIN best_enquiry e 
+  ON l.mobile = e.mobile AND l.lead_date = e.lead_date
+LEFT JOIN best_sale s 
+  ON l.mobile = s.mobile AND l.lead_date = s.lead_date;
