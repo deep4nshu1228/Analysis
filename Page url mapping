@@ -1,0 +1,230 @@
+def categorize_page_url(page_url):
+    """
+    Categorizes a page URL based on string containment matching.
+    The mapping strings can appear anywhere in the URL.
+    Patterns are ordered by specificity to avoid conflicts.
+    
+    Args:
+        page_url (str): The URL to categorize
+        
+    Returns:
+        str: The page category or 'uncategorized' if no match found
+    """
+    
+    # Convert to lowercase for case-insensitive matching
+    url = page_url.lower()
+    
+    # Define mapping patterns ordered by specificity (most specific first)
+    # This order is crucial to prevent shorter patterns from matching first
+    # when longer, more specific patterns should take precedence
+    
+    # More specific patterns first to avoid false matches
+    if 'en-in/rides-and-community' in url:
+        return 'rides-and-community'
+    elif 'rides-and-community' in url:
+        return 'rides-and-community'
+    
+    if 'en-in/become-a-dealer' in url:
+        return 'become-a-dealer'
+    elif 'become-a-dealer' in url:
+        return 'become-a-dealer'
+    
+    if 'motorcycles/executive' in url:
+        return 'motorcycles-executive'
+    elif 'motorcycles/performance' in url:
+        return 'motorcycles-performance'
+    elif 'motorcycles/practical' in url:
+        return 'motorcycles-practical'
+    
+    if 'en-in/products/compare-page' in url:
+        return 'compare-page'
+    elif 'compare-page' in url:
+        return 'compare-page'
+    
+    if 'en-in/company/careers' in url:
+        return 'careers'
+    elif 'company/careers' in url:
+        return 'careers'
+    elif 'careers' in url:
+        return 'careers'
+    
+    if '/company/sustainability' in url:
+        return 'sustainability'
+    elif 'en-in/sustainability' in url:
+        return 'sustainability'
+    elif 'sustainability' in url:
+        return 'sustainability'
+    
+    if 'corporate-enquiry.html' in url:
+        return 'corporate-enquiry'
+    elif 'corporate-enquiry' in url:
+        return 'corporate-enquiry'
+    
+    if 'reach-us/contact-us' in url:
+        return 'contact-us'
+    elif 'company/contact-us' in url:
+        return 'contact-us'
+    elif 'contact-us' in url:
+        return 'contact-us'
+    
+    if '/company/newsroom' in url:
+        return 'newsroom'
+    elif 'newsroom' in url:
+        return 'newsroom'
+    
+    if 'en-in.html/campaigns' in url:
+        return 'campaigns'
+    elif 'en-in/campaigns' in url:
+        return 'campaigns'
+    elif 'campaigns' in url:
+        return 'campaigns'
+    
+    if 'en-in/my-account' in url:
+        return 'my-account'
+    elif 'my-account' in url:
+        return 'my-account'
+    
+    if '/hero-accessories' in url:
+        return 'hero-accessories'
+    elif 'hero-accessories' in url:
+        return 'hero-accessories'
+    
+    if 'en-in/about-us' in url:
+        return 'about-us'
+    elif '/company/about-us' in url:
+        return 'about-us'
+    elif 'about-us' in url:
+        return 'about-us'
+    
+    if 'en-in/buy-now' in url:
+        return 'buy-now'
+    elif 'buy-now' in url:
+        return 'buy-now'
+    
+    if 'en-in/reach-us' in url:
+        return 'reach-us'
+    elif 'reach-us' in url:
+        return 'reach-us'
+    
+    if 'en-in/exchange' in url:
+        return 'exchange'
+    elif 'exchange' in url:
+        return 'exchange'
+    
+    if 'en-in/scooters' in url:
+        return 'scooters'
+    elif 'scooters' in url:
+        return 'scooters'
+    
+    if 'en-in/services' in url:
+        return 'services'
+    elif 'services' in url:
+        return 'services'
+    
+    if 'en-in/blogs' in url:
+        return 'blogs'
+    elif 'blogs' in url:
+        return 'blogs'
+    
+    # Bike categories
+    if '500cc-bikes.html' in url:
+        return '500cc-bikes'
+    elif '500cc-bikes' in url:
+        return '500cc-bikes'
+    
+    if '150cc-bikes.html' in url:
+        return '150cc-bikes'
+    elif '150cc-bikes' in url:
+        return '150cc-bikes'
+    
+    if '125cc-bikes.html' in url:
+        return '125cc-bikes'
+    elif '125cc-bikes' in url:
+        return '125cc-bikes'
+    
+    if '100cc-bikes.html' in url:
+        return '100cc-bikes'
+    elif '100cc-bikes' in url:
+        return '100cc-bikes'
+    
+    # Other patterns
+    if 'price-list.html' in url:
+        return 'price-list'
+    elif 'price-list' in url:
+        return 'price-list'
+    
+    if 'disclaimer.html' in url:
+        return 'disclaimer'
+    elif 'disclaimer' in url:
+        return 'disclaimer'
+    
+    if '/good-life/' in url:
+        return 'good-life'
+    elif 'good-life' in url:
+        return 'good-life'
+    
+    if 'company/csr' in url:
+        return 'CSR'
+    elif 'csr.html' in url:
+        return 'CSR'
+    elif 'csr' in url:
+        return 'CSR'
+    
+    if '/investors' in url:
+        return 'investors'
+    elif 'investors' in url:
+        return 'investors'
+    
+    if 'harley' in url:
+        return 'Harley Davidson'
+    
+    # Home page patterns
+    if 'en-in.html' in url:
+        return 'home'
+    elif 'homepage' in url:
+        return 'home'
+    elif url.strip('/') in ['', 'home', 'index.html']:
+        return 'home'
+    
+    # Additional patterns that might exist
+    if 'press-release' in url:
+        return 'press-release'
+    
+    if 'road-safety' in url or 'safety-campaign' in url:
+        return 'road safety campaign'
+    
+    # If no pattern matches
+    return 'uncategorized'
+
+
+# Example usage and testing function
+def test_categorizer():
+    """Test the categorizer with various URL examples"""
+    test_urls = [
+        # Direct matches
+        'https://example.com/100cc-bikes.html',
+        'https://site.com/en-in/about-us',
+        'https://site.com/company/contact-us/form',
+        'https://site.com/motorcycles/executive/models',
+        'https://site.com/path/to/en-in/scooters/list',
+        'https://site.com/homepage',
+        
+        # Edge cases - these should work correctly with string containment
+        'https://site.com/en-in/blogs/motorcycle-review-article',  # Should be 'blogs'
+        'https://site.com/en-in/services/motorcycle-maintenance',  # Should be 'services'
+        'https://site.com/random/path/csr/info',  # Should be 'CSR'
+        
+        # Unknown URLs
+        'https://site.com/some-unknown-page.html',
+        'https://site.com/random/path/here'
+    ]
+    
+    print("Testing URL Categorizer (String Containment):")
+    print("-" * 50)
+    for url in test_urls:
+        category = categorize_page_url(url)
+        print(f"URL: {url:<45} -> Category: {category}")
+
+# Run the test
+if __name__ == "__main__":
+    test_categorizer()
