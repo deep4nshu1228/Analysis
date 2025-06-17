@@ -1,0 +1,113 @@
+import pandas as pd
+import numpy as np
+
+# --- 1. Sample direct_df (Replace with your actual direct_df) ---
+np.random.seed(42) # For reproducibility
+num_leads = 2000
+data = {
+    'target': np.random.choice([0, 1], size=num_leads, p=[0.94, 0.06]), # 6% conversion rate
+    'time_to_purchase_days': np.random.randint(5, 120, num_leads), # Simulate days for converted leads
+    'lead_probability': np.random.rand(num_leads) # Simulated lead propensity probability
+}
+direct_df = pd.DataFrame(data)
+
+# Set time_to_purchase_days to NaN for non-converted leads (target=0)
+direct_df.loc[direct_df['target'] == 0, 'time_to_purchase_days'] = np.nan
+
+print("Original direct_df head:")
+print(direct_df.head())
+print(f"\nNumber of converted leads (target=1): {direct_df['target'].sum()}")
+print("-" * 50)
+
+# --- 2. Filter Converted Leads (target=1) for calculating averages ---
+# Use .copy() to avoid SettingWithCopyWarning
+converted_leads_df = direct_df[direct_df['target'] == 1].copy()
+
+# --- 3. Define Probability Bins ---
+# These are your intervals (0-.10, .10-.20, etc.)
+prob_bins = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+
+# --- 4. Assign Converted Leads to Probability Bins & Calculate Averages ---
+# Assign each converted lead to a probability bin
+# right=False means [lower_bound, upper_bound) except for the last bin which will be [lower, high]
+converted_leads_df['prob_bin'] = pd.cut(
+    converted_leads_df['lead_probability'],
+    bins=prob_bins,
+    right=False,
+    labels=[f'[{p_low:.1f}, {p_high:.1f})' for p_low, p_high in zip(prob_bins[:-1], prob_bins[1:])]
+)
+
+# Fix the label for the last bin to be inclusive [0.9, 1.0]
+# pd.cut with right=False makes the last bin label (e.g., '[0.9, 1.0)').
+# We manually fix it for display/mapping consistency.
+converted_leads_df['prob_bin'] = converted_leads_df['prob_bin'].astype(str).replace('[0.9, 1.0)', '[0.9, 1.0]')
+
+
+# Calculate the average 'time_to_purchase_days' for each bin
+# This mapping will contain the average days to convert for target=1 in each bin
+average_conversion_times_map = converted_leads_df.groupby('prob_bin')['time_to_purchase_days'].mean().sort_index()
+
+print("\nAverage Days to Convert for Converted Leads per Probability Bin:")
+print(average_conversion_times_map)
+print("-" * 50)
+
+# Convert the Series to a dictionary for efficient lookup
+conversion_time_mapping_dict = average_conversion_times_map.to_dict()
+
+# --- 5. Create a Function to Assign Estimated Time Range to the entire df ---
+
+def get_estimated_conversion_time_range(probability, conversion_map, bin_edges):
+    """
+    Estimates the conversion time range based on the lead probability
+    and a pre-calculated mapping of average conversion times per probability bin.
+
+    Args:
+        probability (float): The predicted probability from the propensity model.
+        conversion_map (dict): A dictionary where keys are probability bin labels
+                               and values are average conversion times.
+        bin_edges (list): The list of probability bin boundaries used for pd.cut.
+
+    Returns:
+        str: A string indicating the estimated conversion time range (e.g., "Estimated within 30 days").
+    """
+    # Use pd.cut on a temporary series to find the correct bin label for the probability
+    temp_series = pd.Series([probability])
+    bin_label_series = pd.cut(
+        temp_series,
+        bins=bin_edges,
+        right=False,
+        labels=[f'[{p_low:.1f}, {p_high:.1f})' for p_low, p_high in zip(bin_edges[:-1], bin_edges[1:])]
+    )
+
+    # Correct label for the last bin if necessary
+    bin_label = str(bin_label_series.iloc[0]).replace('[0.9, 1.0)', '[0.9, 1.0]')
+
+    # Look up the average time for this bin
+    avg_time = conversion_map.get(bin_label)
+
+    if avg_time is not None and not np.isnan(avg_time):
+        return f"Estimated within {int(round(avg_time))} days"
+    else:
+        # This handles cases where a bin might have no converted leads or probability is out of expected range
+        return "Estimated > 90 days or Insufficient Data" # Or "Uncategorized" etc.
+
+# --- 6. Apply the function to the 'lead_probability' column of the direct_df ---
+direct_df['estimated_conversion_time_range'] = direct_df['lead_probability'].apply(
+    lambda p: get_estimated_conversion_time_range(p, conversion_time_mapping_dict, prob_bins)
+)
+
+print("\nDirect DataFrame with 'estimated_conversion_time_range' column:")
+# Display some random samples to see the effect on both target=0 and target=1
+print(direct_df[['target', 'lead_probability', 'time_to_purchase_days', 'estimated_conversion_time_range']].sample(10))
+
+# Verify for a specific probability range (e.g., 0.8-0.9)
+print("\nChecking leads in the 0.8-0.9 probability range:")
+subset_df = direct_df[(direct_df['lead_probability'] >= 0.8) & (direct_df['lead_probability'] < 0.9)]
+print(subset_df[['target', 'lead_probability', 'time_to_purchase_days', 'estimated_conversion_time_range']].head())
+
+# Also verify the average assigned to this bin
+bin_label_check = '[0.8, 0.9)' # or '[0.8, 0.9]' depending on your exact label
+if bin_label_check in conversion_time_mapping_dict:
+    print(f"\nAverage for bin {bin_label_check}: {conversion_time_mapping_dict.get(bin_label_check)} days")
+else:
+    print(f"\nBin {bin_label_check} not found in map (check labels).")
