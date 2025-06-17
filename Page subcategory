@@ -1,19 +1,17 @@
 import re
 
-def extract_category_and_subcategory(url):
-    # Match the category and sub-category from URL
-    match = re.search(r'/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/?', url)
+def get_subcategory_from_url(url, category):
+    """
+    Extracts sub-category that comes immediately after the given category in the URL.
+    """
+    pattern = rf'/{re.escape(category)}/([^/]+)/?'
+    match = re.search(pattern, url)
     if match:
-        category = match.group(1)
-        sub_category = match.group(2)
-    else:
-        category = 'unknown'
-        sub_category = 'unknown'
-    
-    return category, sub_category
+        return match.group(1)
+    return 'unknown'
 
 
-
-df[['page_category', 'page_sub_category']] = df['page_url'].apply(
-    lambda x: pd.Series(extract_category_and_subcategory(str(x)))
+df['subcategory'] = df.apply(
+    lambda row: get_subcategory_from_url(row['page_url'], row['category']),
+    axis=1
 )
