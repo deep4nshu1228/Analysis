@@ -1,0 +1,19 @@
+import re
+
+def extract_category_and_subcategory(url):
+    # Match the category and sub-category from URL
+    match = re.search(r'/([a-zA-Z0-9-]+)/([a-zA-Z0-9-]+)/?', url)
+    if match:
+        category = match.group(1)
+        sub_category = match.group(2)
+    else:
+        category = 'unknown'
+        sub_category = 'unknown'
+    
+    return category, sub_category
+
+
+
+df[['page_category', 'page_sub_category']] = df['page_url'].apply(
+    lambda x: pd.Series(extract_category_and_subcategory(str(x)))
+)
