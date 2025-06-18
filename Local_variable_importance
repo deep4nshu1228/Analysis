@@ -1,0 +1,154 @@
+import pandas as pd
+import shap
+import numpy as np
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.compose import ColumnTransformer
+from collections import defaultdict
+
+# --- 1. Simulate your data and pipeline ---
+# Assume you have original features like 'UNIQUE_PAGES', 'MAX_TIME_SPENT_PAGE_URL_CATEGORY', etc.
+data = {
+    'numeric_feature_A': np.random.rand(100) * 100,
+    'numeric_feature_B': np.random.rand(100) * 50,
+    'UNIQUE_PAGES_category': np.random.choice(['small', 'medium', 'large'], 100),
+    'MAX_TIME_SPENT_PAGE_URL_CATEGORY': np.random.choice(['low', 'med', 'high'], 100),
+    'another_category': np.random.choice(['X', 'Y', 'Z'], 100),
+    'target': np.random.randint(0, 2, 100)
+}
+df = pd.DataFrame(data)
+
+# Define features and target
+X = df.drop('target', axis=1)
+y = df['target']
+
+# Define categorical and numerical features
+categorical_features = X.select_dtypes(include='object').columns
+numerical_features = X.select_dtypes(include=['int64', 'float64']).columns
+
+# Create a preprocessor using ColumnTransformer for one-hot encoding
+preprocessor = ColumnTransformer(
+    transformers=[
+        ('num', 'passthrough', numerical_features),
+        ('cat', OneHotEncoder(handle_unknown='ignore'), categorical_features)
+    ],
+    remainder='passthrough' # Keep other columns if any, though not strictly needed here
+)
+
+# Create the full pipeline
+model_pipeline = Pipeline(steps=[
+    ('preprocessor', preprocessor),
+    ('classifier', GradientBoostingClassifier(random_state=42))
+])
+
+# Train the model
+model_pipeline.fit(X, y)
+
+# Get the encoded feature names (after fitting the preprocessor)
+# This is crucial for SHAP to correctly map values
+# Note: This part can be tricky if you have complex transformers.
+# For simple OneHotEncoder, get_feature_names_out() works.
+# Make sure your X_encoded has these feature names
+encoded_feature_names = (
+    list(numerical_features) +
+    list(model_pipeline.named_steps['preprocessor'].named_transformers_['cat'].get_feature_names_out(categorical_features))
+)
+X_encoded = pd.DataFrame(model_pipeline.named_steps['preprocessor'].transform(X), columns=encoded_feature_names)
+
+
+# --- 2. Select a specific prediction to explain ---
+instance_to_explain_idx = 5 # Let's explain the 6th row of the original DataFrame
+original_instance = X.iloc[instance_to_explain_idx]
+encoded_instance = X_encoded.iloc[instance_to_explain_idx]
+
+# Get the probability for this instance
+predicted_proba = model_pipeline.predict_proba(original_instance.to_frame().T)[0, 1]
+print(f"Original Instance:\n{original_instance}")
+print(f"\nPredicted probability for selected instance: {predicted_proba:.4f}")
+
+
+# --- 3. Use SHAP for local explanation ---
+# The classifier itself is the object that makes the prediction
+classifier = model_pipeline.named_steps['classifier']
+
+# Create a SHAP explainer for the tree-based model
+explainer = shap.TreeExplainer(classifier)
+
+# Calculate SHAP values for the *encoded* instance
+# SHAP values are usually for the raw model output (logit for classification)
+shap_values = explainer.shap_values(encoded_instance)
+
+# For binary classification, shap_values will be a list of two arrays.
+# shap_values[0] for class 0, shap_values[1] for class 1.
+# We usually explain the positive class (class 1).
+shap_values_for_positive_class = shap_values[1]
+base_value_for_positive_class = explainer.expected_value[1]
+
+
+# --- 4. Aggregate SHAP values for original features ---
+# This part uses a similar logic to your image to group SHAP values
+grouped_shap_importance = defaultdict(float)
+
+for i, encoded_feat_name in enumerate(encoded_feature_names):
+    # Check for your specific prefixes
+    if 'UNIQUE_PAGES_category' in encoded_feat_name:
+        # Assuming format like 'UNIQUE_PAGES_category_small'
+        base_feature = encoded_feat_name.split('_category_')[0] + '_category'
+        grouped_shap_importance[base_feature] += shap_values_for_positive_class[i]
+    elif 'MAX_TIME_SPENT_PAGE_URL_CATEGORY' in encoded_feat_name:
+        # Assuming format like 'MAX_TIME_SPENT_PAGE_URL_CATEGORY_low'
+        base_feature = encoded_feat_name.split('_CATEGORY_')[0] + '_CATEGORY'
+        grouped_shap_importance[base_feature] += shap_values_for_positive_class[i]
+    elif '_' in encoded_feat_name and not encoded_feat_name.startswith('numeric_feature'): # General one-hot encoding
+        # This handles general 'feature_prefix_value' cases
+        base_feature = encoded_feat_name.split('_')[0]
+        if base_feature in categorical_features: # Only if it's an original categorical feature
+             grouped_shap_importance[base_feature] += shap_values_for_positive_class[i]
+        else: # For other features not explicitly grouped
+             grouped_shap_importance[encoded_feat_name] += shap_values_for_positive_class[i]
+    else: # For numerical features or non-one-hot encoded features
+        grouped_shap_importance[encoded_feat_name] += shap_values_for_positive_class[i]
+
+# Convert to a DataFrame for easier plotting
+local_contributions_df = pd.DataFrame(
+    list(grouped_shap_importance.items()),
+    columns=['Feature', 'Contribution (SHAP Value)']
+).sort_values(by='Contribution (SHAP Value)', ascending=False)
+
+print("\nIndividual Feature Contributions (SHAP Values) for this prediction:")
+print(local_contributions_df)
+
+
+# --- 5. Visualize the contribution for the single prediction ---
+# For individual predictions, force_plot or waterfall_plot are best.
+# Make sure feature_names for SHAP plots match the columns of X_encoded
+shap.initjs() # For interactive plots in Jupyter Notebooks
+
+# Force plot: Shows how features push the prediction from base value to final value
+# Note: For force_plot, if you aggregated, you can't use the original shap_values and X_encoded directly.
+# You'd need to recreate the SHAP Explanation object with aggregated values.
+# For simplicity, let's plot with original encoded features first.
+print("\nSHAP Force Plot (using original encoded features):")
+shap.plots.force(base_value_for_positive_class,
+                 shap_values_for_positive_class,
+                 encoded_instance,
+                 feature_names=encoded_feature_names)
+
+# Waterfall plot: Another great way to see individual contributions
+print("\nSHAP Waterfall Plot (using original encoded features):")
+shap.plots.waterfall(shap.Explanation(values=shap_values_for_positive_class,
+                                      base_values=base_value_for_positive_class,
+                                      data=encoded_instance.values, # Pass numpy array
+                                      feature_names=encoded_feature_names))
+
+# If you specifically want to plot the `local_contributions_df`:
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 6))
+plt.barh(local_contributions_df['Feature'], local_contributions_df['Contribution (SHAP Value)'],
+         color=['red' if x < 0 else 'green' for x in local_contributions_df['Contribution (SHAP Value)']])
+plt.xlabel('SHAP Value (Contribution to Log-Odds of P(Class=1))')
+plt.ylabel('Feature')
+plt.title(f'Feature Contributions for Single Prediction (Instance {instance_to_explain_idx})')
+plt.gca().invert_yaxis() # Puts largest contribution at the top
+plt.show()
