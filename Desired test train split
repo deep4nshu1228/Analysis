@@ -1,0 +1,159 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from datetime import datetime
+
+# --- 1. Simulate your data (as per your image context) ---
+# Assuming 'ADOBE_ID' is unique and can be used to identify specific rows
+data = {
+    'ADOBE_ID': [f'ID_{i}' for i in range(1, 101)],
+    'CUSTOMER_NAME': [f'Customer_{i}' for i in range(1, 101)],
+    'EMAIL_ID': [f'email_{i}@example.com' for i in range(1, 101)],
+    'MOBILE_NUMBER': [f'98765432{i:02d}' for i in range(1, 101)],
+    'ORIGINAL_STATE': np.random.choice(['StateA', 'StateB', 'StateC'], 100),
+    'LEAD_CREATED_DATE': pd.to_datetime('2023-01-01') + pd.to_timedelta(np.arange(100), unit='D'),
+    'TIME_TO_PURCHASE': np.random.randint(10, 365, 100),
+    'TARGET': np.random.randint(0, 2, 100) # Binary target
+}
+df = pd.DataFrame(data)
+
+# Add 'Insert Datetime (UTC)'
+df['Insert Datetime (UTC)'] = datetime.utcnow()
+
+# Define identifiers and features/target based on your image
+identifiers_cols = [
+    'ADOBE_ID', 'CUSTOMER_NAME', 'EMAIL_ID', 'MOBILE_NUMBER',
+    'ORIGINAL_STATE', 'LEAD_CREATED_DATE', 'Insert Datetime (UTC)',
+    'TIME_TO_PURCHASE' # TIME_TO_PURCHASE seems to be treated as an identifier in your X.drop
+]
+
+# Ensure TARGET is not in identifiers_cols for X.drop
+if 'TARGET' in identifiers_cols:
+    identifiers_cols.remove('TARGET')
+
+X = df.drop(identifiers_cols + ['TARGET'], axis=1) # Drop all identifiers and target
+y = df['TARGET']
+identifiers_df = df[identifiers_cols] # Keep identifiers in a separate DataFrame
+
+print(f"Total rows in df: {len(df)}")
+
+# --- Define the rows you want to be *only* in the test set ---
+# Option 1: By specific ADOBE_ID (assuming it's unique)
+# forced_test_ids = ['ID_5', 'ID_10', 'ID_25']
+# forced_test_indices = df[df['ADOBE_ID'].isin(forced_test_ids)].index.tolist()
+
+# Option 2: By a range of indices (e.g., first 5 rows)
+forced_test_indices = list(range(5)) # Forces rows 0, 1, 2, 3, 4 into test set
+
+print(f"Indices to be forced into test set: {forced_test_indices}")
+print(f"Number of forced test rows: {len(forced_test_indices)}")
+
+# --- Step 1: Separate the forced test rows from the rest of the data ---
+X_forced_test = X.loc[forced_test_indices]
+y_forced_test = y.loc[forced_test_indices]
+id_forced_test = identifiers_df.loc[forced_test_indices]
+
+# Get the remaining data (all rows *not* in the forced test set)
+remaining_indices = [idx for idx in df.index if idx not in forced_test_indices]
+X_remaining = X.loc[remaining_indices]
+y_remaining = y.loc[remaining_indices]
+id_remaining = identifiers_df.loc[remaining_indices]
+
+print(f"Rows remaining after separating forced test: {len(X_remaining)}")
+
+
+# --- Step 2: Perform the train-validation-split on the *remaining* data ---
+# Your original split was:
+# 1. First split into training (70%) and temporary set (30%)
+#    X_train, X_temp, y_train, y_temp, id_train, id_temp = train_test_split(
+#        X, y, identifiers, test_size=0.3, random_state=42, stratify=y
+#    )
+# 2. Then split the temporary set into validation (10% of full data) and test (20% of full data)
+#    X_val, X_test, y_val, y_test, id_val, id_test = train_test_split(
+#        X_temp, y_temp, id_temp, test_size=2/3, random_state=42, stratify=y_temp
+#    )
+
+# Now, apply this to X_remaining, y_remaining, id_remaining
+# Calculate the correct proportions relative to the *remaining* data
+# If original proportions were 70% train, 10% val, 20% test:
+# Remaining data = 100% - (forced test % of full data)
+# Let's say forced test is 5% of original data (5 rows out of 100)
+# Then (X_remaining, y_remaining) represents 95% of the original data.
+# We want train to be 70% of total (original) data, val 10% of total, test 20% of total.
+
+# Proportions relative to the *remaining* dataset:
+# Desired Train % = 0.70 of total
+# Desired Val % = 0.10 of total
+# Desired Test (from remaining) % = 0.20 of total (minus what's already forced)
+
+# Let N be the total number of rows (e.g., 100)
+N = len(df)
+N_forced_test = len(forced_test_indices)
+N_remaining = N - N_forced_test
+
+# Calculate target sizes for train, val, test *from the remaining data*
+# Target for Train: 0.70 * N
+# Target for Val: 0.10 * N
+# Target for Test (from remaining): 0.20 * N - N_forced_test (this will be 0 or negative if N_forced_test is large)
+
+# A more robust way to define the split:
+# First, split into train and temp (val + remaining test) from `_remaining`
+# The `test_size` here should represent (Val_desired_proportion + Test_desired_proportion) / (1 - Forced_Test_proportion)
+# Example: 70% train, 10% val, 20% test. If 5% is forced test.
+# So, train should be 70/95 of remaining. Temp should be 25/95 of remaining.
+temp_size_ratio = (0.10 + 0.20) / (1.0 - (N_forced_test / N))
+if temp_size_ratio >= 1.0: # Handle cases where forced test is too large
+    raise ValueError("Forced test set is too large; cannot satisfy remaining split proportions.")
+
+X_train, X_temp, y_train, y_temp, id_train, id_temp = train_test_split(
+    X_remaining, y_remaining, id_remaining,
+    test_size=temp_size_ratio, # e.g., (0.1 + 0.2) / (1 - 0.05) = 0.3 / 0.95 approx 0.315
+    random_state=42, stratify=y_remaining
+)
+
+# Now, split X_temp into validation and the *non-forced part* of the test set
+# The test_size here should represent (desired test proportion) / (desired val proportion + desired test proportion)
+# e.g., 0.20 / (0.10 + 0.20) = 0.20 / 0.30 = 2/3
+test_val_split_ratio = (0.20 * N) / (0.10 * N + 0.20 * N) # This ensures correct proportions from total N
+if (0.10 * N + 0.20 * N) == 0: # Avoid division by zero if target validation/test is zero
+     test_val_split_ratio = 1.0 if (0.20 * N) > 0 else 0.0
+
+X_val, X_test_non_forced, y_val, y_test_non_forced, id_val, id_test_non_forced = train_test_split(
+    X_temp, y_temp, id_temp,
+    test_size=test_val_split_ratio, # This ensures the final test set is correct
+    random_state=42, stratify=y_temp
+)
+
+# --- Step 3: Combine the non-forced test rows with the forced test rows ---
+X_test = pd.concat([X_forced_test, X_test_non_forced])
+y_test = pd.concat([y_forced_test, y_test_non_forced])
+id_test = pd.concat([id_forced_test, id_test_non_forced])
+
+
+# --- Verify the sizes and ensure forced rows are in test set ---
+print("\n--- Final Split Sizes ---")
+print(f"Train Set Size: {len(X_train)} (Desired: {0.70 * N:.0f})")
+print(f"Validation Set Size: {len(X_val)} (Desired: {0.10 * N:.0f})")
+print(f"Test Set Size: {len(X_test)} (Desired: {0.20 * N:.0f})")
+
+# Check if all forced test indices are in the final test set
+# This requires checking the index of the DataFrames
+forced_test_rows_in_final_test = all(idx in X_test.index for idx in forced_test_indices)
+print(f"Are all forced rows in the final test set? {forced_test_rows_in_final_test}")
+
+# Optionally, verify no forced rows are in train or validation
+forced_test_rows_in_train = any(idx in X_train.index for idx in forced_test_indices)
+forced_test_rows_in_val = any(idx in X_val.index for idx in forced_test_indices)
+print(f"Are any forced rows in the train set? {forced_test_rows_in_train}")
+print(f"Are any forced rows in the validation set? {forced_test_rows_in_val}")
+
+# You can also check for ID uniqueness across sets if IDs are available
+# Example: Check for overlap in IDs
+train_ids = set(id_train['ADOBE_ID'])
+val_ids = set(id_val['ADOBE_ID'])
+test_ids = set(id_test['ADOBE_ID'])
+
+print(f"Overlap between Train and Val IDs: {len(train_ids.intersection(val_ids))}")
+print(f"Overlap between Train and Test IDs: {len(train_ids.intersection(test_ids))}")
+print(f"Overlap between Val and Test IDs: {len(val_ids.intersection(test_ids))}")
+
