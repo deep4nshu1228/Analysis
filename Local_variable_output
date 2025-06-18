@@ -1,0 +1,117 @@
+import shap
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import pandas as pd
+from collections import defaultdict
+
+# --- Assuming the previous setup and trained `gb_borderlinesmote_model` is available ---
+# Also, `X_test`, `y_test`, `feature_names_encoded` (from the preprocessor) are available.
+
+# 1. Select a specific instance from the test set to explain
+instance_to_explain_idx = 0 # You can change this index
+original_instance_X = X_test.iloc[[instance_to_explain_idx]] # Use .iloc for row selection
+original_instance_y = y_test.iloc[instance_to_explain_idx]
+
+# Get the preprocessed (encoded) version of this instance
+# Use the *pipeline's* preprocessor to transform it correctly
+encoded_instance = gb_borderlinesmote_model.named_steps['preprocessor'].transform(original_instance_X)
+# Convert to DataFrame to maintain feature names for SHAP (important for TreeExplainer)
+encoded_instance_df = pd.DataFrame(encoded_instance, columns=feature_names_encoded)
+
+
+# Get the predicted probability for this instance
+predicted_proba = gb_borderlinesmote_model.predict_proba(original_instance_X)[0, 1]
+print(f"Explaining prediction for instance (original index): {original_instance_X.index.values[0]}")
+print(f"Actual target: {original_instance_y}")
+print(f"Predicted probability of class 1: {predicted_proba:.4f}")
+
+# 2. Use SHAP to explain the prediction
+# The classifier itself is the object that makes the prediction from the *transformed* data
+classifier = gb_borderlinesmote_model.named_steps['classifier']
+
+# Create a SHAP explainer for the tree-based model
+# Pass the encoded_instance_df directly to TreeExplainer for better handling of feature names
+explainer = shap.TreeExplainer(classifier)
+
+# Calculate SHAP values for the specific encoded instance
+# shap_values will be a list of two arrays for binary classification.
+# shap_values[1] contains the values for the positive class (what we usually explain).
+shap_values = explainer.shap_values(encoded_instance_df.iloc[0]) # Pass a single row as numpy array
+
+# The base value (expected value) for the positive class
+base_value_for_positive_class = explainer.expected_value[1]
+
+
+# 3. Aggregate SHAP values for original features (similar to global importance)
+# We need to map the SHAP values back to the original feature names.
+local_grouped_shap_importance = defaultdict(float)
+
+for i, encoded_feat_name in enumerate(feature_names_encoded):
+    shap_val = shap_values[i]
+    if 'UNIQUE_PAGES_category' in encoded_feat_name:
+        base_feature = 'UNIQUE_PAGES_category'
+        local_grouped_shap_importance[base_feature] += shap_val
+    elif 'MAX_TIME_SPENT_PAGE_URL_CATEGORY' in encoded_feat_name:
+        base_feature = 'MAX_TIME_SPENT_PAGE_URL_CATEGORY'
+        local_grouped_shap_importance[base_feature] += shap_val
+    elif '_' in encoded_feat_name and encoded_feat_name.split('_')[0] in categorical_features:
+        base_feature = encoded_feat_name.split('_')[0]
+        local_grouped_shap_importance[base_feature] += shap_val
+    else: # Numerical features or features not one-hot encoded
+        local_grouped_shap_importance[encoded_feat_name] += shap_val
+
+# Convert to DataFrame for plotting
+local_contributions_df = pd.DataFrame(
+    list(local_grouped_shap_importance.items()),
+    columns=['Feature', 'SHAP_Value']
+).sort_values(by='SHAP_Value', key=abs, ascending=False) # Sort by absolute SHAP value for impact
+
+# 4. Normalize SHAP values to percentages
+# This is a bit tricky for SHAP values because they sum to log-odds differences.
+# Instead of a direct percentage of the total SHAP sum (which can be negative),
+# we often represent the *magnitude* of their contribution relative to the sum of absolute SHAP values.
+# Or, more commonly, just plot the SHAP values directly.
+
+# For a 'percentage' interpretation, we can show what percentage of the *total absolute change*
+# each feature accounts for.
+total_abs_shap_change = np.sum(np.abs(local_contributions_df['SHAP_Value']))
+
+if total_abs_shap_change > 0:
+    local_contributions_df['Percentage_Contribution'] = (np.abs(local_contributions_df['SHAP_Value']) / total_abs_shap_change) * 100
+else:
+    local_contributions_df['Percentage_Contribution'] = 0
+
+
+print("\nLocal Feature Contributions (SHAP Values and Percentage Magnitude):")
+print(local_contributions_df)
+
+# 5. Plotting the Local Variable Contribution
+plt.figure(figsize=(12, 8))
+# Use SHAP_Value for bar length, and color based on sign
+colors = ['skyblue' if x >= 0 else 'salmon' for x in local_contributions_df['SHAP_Value']]
+sns.barplot(x='SHAP_Value', y='Feature', data=local_contributions_df, palette=colors)
+plt.title(f'Local Feature Contributions for Single Prediction (Prob: {predicted_proba:.2f})')
+plt.xlabel('SHAP Value (Contribution to Log-Odds of P(Class=1))')
+plt.ylabel('Feature')
+
+# Add percentage labels as text for clarity
+for index, row in local_contributions_df.iterrows():
+    # Place text based on the sign of the SHAP value
+    # Adjust position slightly for readability
+    if row.SHAP_Value >= 0:
+        plt.text(row.SHAP_Value + 0.05, index, f'{row.Percentage_Contribution:.1f}%', va='center')
+    else:
+        plt.text(row.SHAP_Value - 0.05, index, f'{row.Percentage_Contribution:.1f}%', va='center', ha='right')
+
+plt.tight_layout()
+plt.show()
+
+# SHAP Force Plot (Interactive and highly recommended for single predictions)
+# Make sure to run shap.initjs() in a Jupyter environment
+# shap.initjs()
+# shap.plots.force(base_value_for_positive_class,
+#                  shap_values, # Raw SHAP values for the single encoded instance
+#                  encoded_instance_df.iloc[0],
+#                  feature_names=feature_names_encoded,
+#                  matplotlib=True) # Set to True to get a static matplotlib plot
