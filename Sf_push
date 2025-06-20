@@ -1,0 +1,55 @@
+pip install snowflake-connector-python pandas
+
+import pandas as pd
+import snowflake.connector
+
+# Snowflake credentials
+conn = snowflake.connector.connect(
+    user='YOUR_USERNAME',
+    password='YOUR_PASSWORD',
+    account='YOUR_ACCOUNT',
+    warehouse='YOUR_WAREHOUSE',
+    database='YOUR_DATABASE',
+    schema='YOUR_SCHEMA'
+)
+
+cursor = conn.cursor()
+
+# Assume df is your dataframe with column 'mobile_number'
+temp_table = "TEMP_MY_TABLE"
+df.to_csv("temp.csv", index=False)
+
+# Create temporary table
+columns = ", ".join([f"{col} STRING" for col in df.columns])
+cursor.execute(f"CREATE OR REPLACE TEMPORARY TABLE {temp_table} ({columns})")
+
+# Put CSV to Snowflake Stage
+cursor.execute(f"PUT file://temp.csv @%{temp_table}")
+
+# Load data into temp table
+cursor.execute(f"""
+COPY INTO {temp_table}
+FROM @%{temp_table}/temp.csv
+FILE_FORMAT = (TYPE = 'CSV' FIELD_OPTIONALLY_ENCLOSED_BY = '"' SKIP_HEADER = 1)
+""")
+
+
+
+
+columns = list(df.columns)
+update_clause = ", ".join([f"tgt.{col} = src.{col}" for col in columns if col != 'mobile_number'])
+columns_str = ", ".join(columns)
+values_str = ", ".join([f"src.{col}" for col in columns])
+
+merge_sql = f"""
+MERGE INTO LEADS tgt
+USING TEMP_MY_TABLE src
+ON tgt.mobile_number = src.mobile_number
+WHEN MATCHED THEN
+    UPDATE SET {update_clause}
+WHEN NOT MATCHED THEN
+    INSERT ({columns_str})
+    VALUES ({values_str})
+"""
+
+cursor.execute(merge_sql)
