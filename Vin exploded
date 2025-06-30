@@ -1,1 +1,19 @@
-
+WITH vin_exploded AS (
+  SELECT
+    cleaned_mobile_number,
+    full_timestamp,
+    TRIM(vin_date.value:vin::STRING) AS VIN,
+    TRIM(vin_date.value:purchase_date::STRING) AS purchase_date
+  FROM DS_LPD_T3,
+  LATERAL FLATTEN(
+    input => (
+      SELECT ARRAY_AGG(
+        OBJECT_CONSTRUCT(
+          'vin', TRIM(SPLIT(previous_purchase_vin_numbers, ',')[i]),
+          'purchase_date', TRIM(SPLIT(previous_purchase_dates, ',')[i])
+        )
+      )
+      FROM TABLE(GENERATOR(ROWCOUNT => ARRAY_SIZE(SPLIT(previous_purchase_vin_numbers, ',')))) AS t(i)
+    )
+  ) vin_date
+)
